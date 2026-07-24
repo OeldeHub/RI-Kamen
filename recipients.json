@@ -1,0 +1,4 @@
+[
+  { "email": "max.mustermann@example.com", "name": "Max", "greeting": "Lieber Max," },
+  { "email": "erika.musterfrau@example.com", "name": "Erika", "greeting": "Liebe Erika," }
+]

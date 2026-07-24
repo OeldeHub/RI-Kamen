@@ -1,0 +1,73 @@
+name: Ratsinfo Kamen Monitor
+
+on:
+  # Läufe kommen ausschließlich über cron-job.org per workflow_dispatch.
+  workflow_dispatch:
+    inputs:
+      test_email:
+        description: "Test-Lauf: Mail NUR an diese Adresse (leer = normaler Lauf)"
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  check-for-updates:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
+
+      - name: Restore cached state
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            last_hash.txt
+            last_links.json
+            last_state.json
+            deleted_sessions.json
+            last_email_hash.txt
+            last_run_slots.json
+          # Eindeutiger Primärschlüssel pro Lauf trifft nie exakt, daher greift
+          # immer der restore-keys-Präfix und lädt den jüngsten gespeicherten
+          # Zustand. So friert der Cache nicht auf dem ersten Inhalt ein.
+          key: kamen-ratsinfo-monitor-state-${{ github.run_id }}
+          restore-keys: |
+            kamen-ratsinfo-monitor-state-
+
+      - name: Run monitor script
+        env:
+          EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+          EMAIL_RECIPIENT: ${{ secrets.EMAIL_RECIPIENT }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          # Optional: dedizierte Adresse für die automatische Erstlauf-Testmail.
+          # Leer lassen, dann geht die Erstlauf-Testmail an den ganzen Verteiler.
+          TEST_MAIL_RECIPIENT: ${{ secrets.TEST_MAIL_RECIPIENT }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          TEST_EMAIL: ${{ inputs.test_email }}
+        run: python monitor.py
+
+      - name: Save state to cache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: |
+            last_hash.txt
+            last_links.json
+            last_state.json
+            deleted_sessions.json
+            last_email_hash.txt
+            last_run_slots.json
+          key: kamen-ratsinfo-monitor-state-${{ github.run_id }}
