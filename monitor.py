@@ -115,7 +115,18 @@ def save_last_run_slots(slots):
         json.dump(slots, f, ensure_ascii=False, indent=2)
 
 
-def fetch_page(url=None, retries=3):
+def is_connectivity_error(exc):
+    """True, wenn der Fehler ein reines Erreichbarkeits-/Netzwerkproblem ist.
+
+    Solche Fehler (Server nicht erreichbar, Timeout, DNS) liegen außerhalb
+    unseres Codes – meist ist das Ratsportal kurz down oder blockt die
+    Runner-IP. Sie sollen den Lauf nicht als "failed" markieren.
+    """
+    return isinstance(exc, (requests.exceptions.ConnectionError,
+                            requests.exceptions.Timeout))
+
+
+def fetch_page(url=None, retries=5):
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -130,7 +141,8 @@ def fetch_page(url=None, retries=3):
             return response.text
         except requests.RequestException as e:
             if attempt < retries:
-                wait = 2 ** attempt
+                # Exponentielles Backoff, aber bei 60s gedeckelt: 2, 4, 8, 16 ...
+                wait = min(2 ** attempt, 60)
                 logger.warning("Versuch %d/%d fehlgeschlagen für %s: %s – warte %ds",
                                attempt, retries, target, e, wait)
                 time.sleep(wait)
@@ -1380,6 +1392,10 @@ def run_test_mode(test_email, dry_run):
     try:
         html = fetch_page()
     except Exception as e:
+        if is_connectivity_error(e):
+            logger.warning("Seite nicht erreichbar (Netzwerk/Timeout): %s – "
+                           "Test-Lauf wird ohne Fehler übersprungen.", e)
+            sys.exit(0)
         logger.error("Fehler beim Abrufen der Seite: %s", e)
         sys.exit(1)
 
@@ -1472,6 +1488,14 @@ def main():
     try:
         html = fetch_page()
     except Exception as e:
+        if is_connectivity_error(e):
+            # Ratsportal vorübergehend nicht erreichbar – kein Code-Fehler.
+            # Sauber beenden (Exit 0), damit der Workflow nicht rot wird. Der
+            # Slot bleibt ungemarkt, sodass der nächste Lauf es erneut versucht.
+            logger.warning("Seite nicht erreichbar (Netzwerk/Timeout): %s – "
+                           "Lauf wird ohne Fehler übersprungen, nächster Versuch "
+                           "beim nächsten Lauf.", e)
+            sys.exit(0)
         logger.error("Fehler beim Abrufen der Seite: %s", e)
         sys.exit(1)
 
