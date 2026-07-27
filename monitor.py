@@ -1082,7 +1082,8 @@ def load_recipients():
 
 def send_email(changes=None, page_changed=False, is_test=False,
         all_current_links=None, new_links=None, removed_links=None,
-        sessions_data=None, dry_run=False, recipients=None):
+        sessions_data=None, dry_run=False, recipients=None,
+        portal_unreachable=False):
     sender = os.environ["EMAIL_SENDER"]
     if recipients is None:
         recipients = load_recipients()
@@ -1171,12 +1172,22 @@ def send_email(changes=None, page_changed=False, is_test=False,
             '</tr></table>',
             variant="geaendert",
         )
+        portal_note = ""
+        if portal_unreachable:
+            portal_note = (
+                '<p class="text-default" style="font-size:14px;color:#8a5a00;'
+                'background:#fff6e5;border:1px solid #ffe0a3;border-radius:8px;'
+                'padding:10px 12px;margin:0 0 14px;">'
+                '<b>Hinweis:</b> Das Ratsportal war zum Zeitpunkt dieser Testmail '
+                'nicht erreichbar (Netzwerk/Timeout). Der <b>E-Mail-Versand funktioniert</b> '
+                '– es konnten nur gerade keine Sitzungsdaten geladen werden.</p>'
+            )
         body_content = (
             GREETING_BLOCK_HTML
             + '<p class="text-default" style="font-size:14px;color:#444;margin:0 0 14px;">'
               'Dies ist eine <b>Testmail</b> beim ersten Durchlauf. Ab jetzt wird die Seite '
               'regelmäßig geprüft und du erhältst eine E-Mail, sobald sich etwas ändert.</p>'
-            + stats_card + session_overview
+            + portal_note + stats_card + session_overview
         )
         body_html = _email_wrapper(title_html, body_content, now_full)
 
@@ -1389,31 +1400,41 @@ def run_test_mode(test_email, dry_run):
     logger.info("Test-Modus: Mail geht nur an %s, gespeicherter Zustand bleibt unverändert.", pretty)
 
     logger.info("Prüfe %s ...", URL)
+    # Der Zweck der Testmail ist, den E-Mail-Versand zu prüfen. Sie darf daher
+    # NICHT an der Erreichbarkeit des Ratsportals hängen: Ist die Seite gerade
+    # nicht erreichbar (Netzwerk/Timeout, z. B. weil der Runner geblockt wird),
+    # geht die Testmail trotzdem raus – nur eben ohne Sitzungsdaten und mit
+    # einem Hinweis. Nur echte (Code-)Fehler brechen weiterhin hart ab.
+    portal_unreachable = False
+    html = None
     try:
         html = fetch_page()
     except Exception as e:
         if is_connectivity_error(e):
             logger.warning("Seite nicht erreichbar (Netzwerk/Timeout): %s – "
-                           "Test-Lauf wird ohne Fehler übersprungen.", e)
-            sys.exit(0)
-        logger.error("Fehler beim Abrufen der Seite: %s", e)
-        sys.exit(1)
+                           "Testmail wird trotzdem versendet (ohne Sitzungsdaten).", e)
+            portal_unreachable = True
+        else:
+            logger.error("Fehler beim Abrufen der Seite: %s", e)
+            sys.exit(1)
 
-    current_links = extract_links(html)
-    sessions = extract_sessions(html)
+    current_links = []
     sessions_data = {}
-    for s in sessions:
-        details = extract_session_details(s["detail_url"])
-        sessions_data[s["ksinr"]] = {
-            "name": s["name"],
-            "date": s["date"],
-            "time": s["time"],
-            "detail_url": s["detail_url"],
-            "title": details["title"],
-            "tops": details["tops"],
-            "docs": details["docs"],
-        }
-        time.sleep(REQUEST_DELAY)
+    if html is not None:
+        current_links = extract_links(html)
+        sessions = extract_sessions(html)
+        for s in sessions:
+            details = extract_session_details(s["detail_url"])
+            sessions_data[s["ksinr"]] = {
+                "name": s["name"],
+                "date": s["date"],
+                "time": s["time"],
+                "detail_url": s["detail_url"],
+                "title": details["title"],
+                "tops": details["tops"],
+                "docs": details["docs"],
+            }
+            time.sleep(REQUEST_DELAY)
 
     try:
         send_email(
@@ -1422,6 +1443,7 @@ def run_test_mode(test_email, dry_run):
             sessions_data=sessions_data,
             dry_run=dry_run,
             recipients=[test_recipient],
+            portal_unreachable=portal_unreachable,
         )
     except Exception as e:
         logger.error("E-Mail-Fehler: %s", e)
