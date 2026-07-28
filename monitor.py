@@ -21,8 +21,14 @@ from bs4 import BeautifulSoup
 logger = logging.getLogger("ratsinfo-kamen-monitor")
 TZ = ZoneInfo("Europe/Berlin")
 
-BRAND_COLOR = "#003366"
-BRAND_BG_TINT = "#f0f4f8"
+# Corporate Design der Stadt Kamen
+# - Wortmarke/Struktur: Kamener Navyblau
+# - Signatur-Akzent: Gelb-Rot-Leiste unter dem Logo (wie im Stadtlogo)
+# - Hintergrund-Tint: aus dem Kamener Hellblau abgeleitet
+BRAND_COLOR = "#003D5C"        # Kamener Navyblau (Wortmarke/Navigation)
+BRAND_BG_TINT = "#eaf2f7"      # heller Blau-Tint (aus #A8D5E2)
+KAMEN_YELLOW = "#FFED00"       # Gelb der Kamener Akzentleiste
+KAMEN_RED = "#E31F23"          # Rot der Kamener Akzentleiste
 BRAND_NAME = "Stadt Kamen"
 BRAND_FOOTER = "Ratsinformationssystem der Stadt Kamen"
 MAIL_SUBJECT_PREFIX = "Ratsinfo Kamen"
@@ -666,7 +672,7 @@ def _email_wrapper(title_html, body_content, now_full):
     .top-row   {{ font-size: 13px !important; }}
     .doc-link  {{ font-size: 12px !important; }}
     .title-h   {{ font-size: 20px !important; }}
-    .brand-logo-wrap img {{ width: 120px !important; max-width: 120px !important; }}
+    .brand-logo-wrap img {{ width: 160px !important; max-width: 160px !important; }}
   }}
   @media (prefers-color-scheme: dark) {{
     body, .bg {{ background-color: #121214 !important; }}
@@ -674,7 +680,9 @@ def _email_wrapper(title_html, body_content, now_full):
     .accent-bar {{ background-color: #4a78a8 !important; }}
     .header-pad, .body-pad {{ background-color: #1c1c1f !important; }}
     .header-pad {{ border-bottom-color: #2a2a2d !important; }}
-    .footer-pad {{ background-color: #161618 !important; border-top-color: #4a78a8 !important; }}
+    .footer-pad {{ background-color: #161618 !important; }}
+    .stripe-yellow {{ background-color: #FFED00 !important; }}
+    .stripe-red {{ background-color: #E31F23 !important; }}
     .title-accent {{ background-color: #4a78a8 !important; }}
     .text-strong {{ color: #f0f0f0 !important; }}
     .text-default {{ color: #d2d2d4 !important; }}
@@ -703,11 +711,16 @@ def _email_wrapper(title_html, body_content, now_full):
 <tr><td align="center" class="container" style="padding:24px 16px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="panel" style="max-width:640px;background-color:#ffffff;border-radius:4px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
 
-<tr><td class="accent-bar" style="background:{BRAND_COLOR};height:5px;font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td style="padding:0;font-size:0;line-height:0;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+<td class="stripe-yellow" style="background:{KAMEN_YELLOW};height:6px;width:56%;font-size:0;line-height:0;">&nbsp;</td>
+<td class="stripe-red" style="background:{KAMEN_RED};height:6px;width:44%;font-size:0;line-height:0;">&nbsp;</td>
+</tr></table>
+</td></tr>
 
 <tr><td class="header-pad" style="background:#ffffff;padding:32px 36px 28px;border-bottom:1px solid #ececee;text-align:center;">
 <div class="brand-logo-wrap" style="display:inline-block;background:#ffffff;padding:4px 6px;border-radius:4px;margin-bottom:18px;font-size:0;line-height:0;">
-<img src="cid:logo" alt="{BRAND_NAME}" width="140" style="display:block;border:0;outline:none;text-decoration:none;height:auto;max-width:140px;">
+<img src="cid:logo" alt="{BRAND_NAME}" width="184" style="display:block;border:0;outline:none;text-decoration:none;height:auto;max-width:184px;">
 </div>
 {title_html}
 <div class="title-accent" style="width:48px;height:3px;background:{BRAND_COLOR};border-radius:2px;margin:14px auto 0;font-size:0;line-height:0;">&nbsp;</div>
@@ -721,7 +734,14 @@ def _email_wrapper(title_html, body_content, now_full):
 <a class="cta-btn" href="{URL}" style="display:inline-block;background:{BRAND_COLOR};color:#ffffff;font-size:13px;font-weight:700;padding:13px 36px;border-radius:4px;text-decoration:none;text-transform:uppercase;letter-spacing:1.2px;">Zur Seite &rarr;</a>
 </td></tr>
 
-<tr><td class="footer-pad" style="background:#f7f7f9;padding:18px 32px;text-align:center;border-top:2px solid {BRAND_COLOR};">
+<tr><td style="padding:0;font-size:0;line-height:0;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+<td class="stripe-yellow" style="background:{KAMEN_YELLOW};height:4px;width:56%;font-size:0;line-height:0;">&nbsp;</td>
+<td class="stripe-red" style="background:{KAMEN_RED};height:4px;width:44%;font-size:0;line-height:0;">&nbsp;</td>
+</tr></table>
+</td></tr>
+
+<tr><td class="footer-pad" style="background:#f7f7f9;padding:18px 32px;text-align:center;">
 <div class="text-faint" style="font-size:11px;color:#999;">Automatische Benachrichtigung &middot; {now_full}</div>
 <div class="text-faint" style="font-size:11px;color:#b5b5b8;margin-top:3px;">{BRAND_FOOTER}</div>
 </td></tr>
