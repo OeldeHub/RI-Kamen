@@ -49,10 +49,9 @@ _DEFAULTS = {
     "run_slots_file": "last_run_slots.json",
     "deleted_retention_days": 3,
     "request_delay": 1,
-    # Ziel-Uhrzeiten (Berliner Zeit) für den GitHub-Cron-Fallback. Die primären
-    # Läufe (10:00/18:00) kommen über cron-job.org per workflow_dispatch und
-    # umgehen diesen Guard; der GitHub-Cron dient nur als Sicherheitsnetz um 21:00.
-    "run_hours": [21],
+    # Ziel-Uhrzeiten (Berliner Zeit) für die geplanten GitHub-Cron-Läufe.
+    # Manuelle Läufe (workflow_dispatch) umgehen diesen Guard.
+    "run_hours": [10, 18],
     # Länge des Akzeptanzfensters je Ziel-Uhrzeit in Stunden. Fängt
     # Verzögerungen des GitHub-Schedulers ab (Cron-Jobs starten oft 30+ Min spät).
     "run_window_hours": 4,

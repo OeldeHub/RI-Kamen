@@ -159,9 +159,15 @@ Repo-Root überschreiben. Beispiel mit den Kamen-Vorgaben:
 
 ## Wie oft wird geprüft?
 
-Die Läufe werden extern über **cron-job.org** per „Run workflow" ausgelöst
-(siehe `workflow_dispatch` im Workflow). Manuelle Läufe über die Actions-
-Oberfläche umgehen das Zeitfenster und laufen sofort.
+Der Workflow hat einen eigenen Zeitplan (`schedule` in `monitor.yml`) und
+prüft zweimal täglich, um **10:00** und **18:00 Uhr** Berliner Zeit. Der Cron
+feuert stündlich in einem Band um diese Uhrzeiten; `monitor.py` führt jeden
+Slot höchstens einmal pro Tag aus (`run_hours` / `run_window_hours`). Ist das
+Ratsportal nicht erreichbar, holt der nächste Stundentakt den Lauf nach.
+
+Manuelle Läufe über die Actions-Oberfläche („Run workflow") umgehen das
+Zeitfenster und laufen sofort. Ein externer Dienst wie cron-job.org ist nicht
+mehr nötig.
 
 > **Hinweis:** GitHub Actions führt geplante Jobs manchmal mit einigen Minuten
 > Verzögerung aus.

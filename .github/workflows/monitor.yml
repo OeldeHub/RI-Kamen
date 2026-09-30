@@ -1,7 +1,13 @@
 name: Ratsinfo Kamen Monitor
 
 on:
-  # Läufe kommen ausschließlich über cron-job.org per workflow_dispatch.
+  # Zeitplan in UTC. Ziel sind 10:00 und 18:00 Uhr Berliner Zeit. Der Cron feuert
+  # stündlich in einem Band, das Sommer- und Winterzeit abdeckt. monitor.py lässt
+  # nur Läufe im Fenster durch und führt jeden Slot höchstens einmal pro Tag aus.
+  # Verspätete oder fehlgeschlagene Läufe holt der nächste Stundentakt nach.
+  schedule:
+    - cron: "7 8-12,16-20 * * *"
+  # Manueller Start über „Run workflow“ (umgeht das Zeitfenster).
   workflow_dispatch:
     inputs:
       test_email:
